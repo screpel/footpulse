@@ -1,0 +1,19 @@
+{
+  "name": "FootPulse — Suivi U13F",
+  "short_name": "FootPulse",
+  "description": "Suivi des performances et statistiques de football",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#0f172a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
