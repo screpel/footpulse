@@ -34,6 +34,7 @@ export default function App() {
     availableSeasons,
     filteredSessions,
     knownTeams,
+    clubCityMap,
     defaultLieu,
     defaultEquipe,
     records,
@@ -268,6 +269,7 @@ export default function App() {
           onSessionSaved={refreshSessions}
           sessionToEdit={sessionToEdit}
           knownTeams={knownTeams}
+          clubCityMap={clubCityMap}
           defaultLieu={defaultLieu}
           defaultEquipe={defaultEquipe}
         />

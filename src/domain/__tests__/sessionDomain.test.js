@@ -10,7 +10,8 @@ import {
   calculatePersonalRecords,
   evaluateSessionRecords,
   calculateMatchSummary,
-  calculateWeeklySummary
+  calculateWeeklySummary,
+  filterClubSuggestions
 } from '../sessionMetrics.js'
 import {
   getSeasonFromDate,
@@ -149,6 +150,17 @@ describe('Domain - sessionMetrics', () => {
     assert.equal(weekly.chronicCharge, 600)
     assert.equal(weekly.formStatus, 'MODERATE')
     assert.equal(weekly.weekHistory.length, 5)
+  })
+
+  it('filtre les clubs par nom ou par ville associée', () => {
+    const teams = ['Olympique Nord', 'Racing Club Sud', 'AS Littoral']
+    const cityMap = {
+      'Olympique Nord': 'Ville-Nord',
+      'Racing Club Sud': 'Ville-Sud'
+    }
+    assert.deepEqual(filterClubSuggestions('littoral', teams, cityMap), ['AS Littoral'])
+    assert.deepEqual(filterClubSuggestions('ville-sud', teams, cityMap), ['Racing Club Sud'])
+    assert.deepEqual(filterClubSuggestions('AS Littoral', teams, cityMap), [])
   })
 })
 

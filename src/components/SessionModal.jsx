@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { X, CloudRain, Save, Loader2, Trash2, Flame } from 'lucide-react'
 import { sessionRepository } from '../services/sessionRepository'
+import { clubRepository } from '../services/clubRepository'
 import { getHistoricalWeather } from '../services/weather'
 import { calculateFosterLoad } from '../domain/sessionMetrics'
 import { toSessionFormState, toSessionPayload } from '../domain/sessionMapper'
@@ -14,6 +15,7 @@ export default function SessionModal({
     onSessionSaved,
     sessionToEdit,
     knownTeams = [],
+    clubCityMap = {},
     defaultLieu = '',
     defaultEquipe = ''
 }) {
@@ -76,6 +78,10 @@ export default function SessionModal({
         if (error) {
             alert("Erreur lors de l'enregistrement : " + error.message)
         } else {
+            await clubRepository.ensureClubsExist([
+                { nom: payload.equipe, ville: null },
+                { nom: payload.adversaire, ville: null }
+            ])
             onSessionSaved()
             onClose()
         }
@@ -177,6 +183,7 @@ export default function SessionModal({
                                         onChange={(val) => setForm({ ...form, equipe: val })}
                                         placeholder="Notre équipe..."
                                         existingTeams={knownTeams}
+                                        clubCityMap={clubCityMap}
                                     />
                                 </div>
                                 <div>
@@ -186,6 +193,7 @@ export default function SessionModal({
                                         onChange={(val) => setForm({ ...form, adversaire: val })}
                                         placeholder="Nom du club..."
                                         existingTeams={knownTeams}
+                                        clubCityMap={clubCityMap}
                                     />
                                 </div>
                             </div>

@@ -1,6 +1,7 @@
 // src/hooks/useSessions.js
 import { useState, useCallback, useMemo } from 'react'
 import { sessionRepository } from '../services/sessionRepository'
+import { clubRepository } from '../services/clubRepository'
 import { calculatePersonalRecords, calculateMatchSummary } from '../domain/sessionMetrics'
 import {
   getSeasonFromDate,
@@ -13,21 +14,30 @@ import {
 
 export function useSessions() {
   const [sessions, setSessions] = useState([])
+  const [clubs, setClubs] = useState([])
   const [loading, setLoading] = useState(true)
   const [filterType, setFilterType] = useState('ALL')
   const [selectedSeason, setSelectedSeason] = useState('ALL')
 
   const refreshSessions = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await sessionRepository.findAll()
-    if (!error && data) {
-      setSessions(data)
+    const [sessionsRes, clubsRes] = await Promise.all([
+      sessionRepository.findAll(),
+      clubRepository.findAll()
+    ])
+
+    if (!sessionsRes.error && sessionsRes.data) {
+      setSessions(sessionsRes.data)
+    }
+    if (!clubsRes.error && clubsRes.data) {
+      setClubs(clubsRes.data)
     }
     setLoading(false)
   }, [])
 
   const clearSessions = useCallback(() => {
     setSessions([])
+    setClubs([])
   }, [])
 
   const availableSeasons = useMemo(() => getAvailableSeasons(sessions), [sessions])
@@ -47,10 +57,23 @@ export function useSessions() {
     })
   }, [seasonSessions, filterType])
 
-  const knownTeams = useMemo(
-    () => Array.from(new Set(sessions.flatMap(s => [s.equipe, s.adversaire]).filter(Boolean))),
-    [sessions]
-  )
+  // Fusion des clubs de l'historique et du référentiel public.clubs
+  const knownTeams = useMemo(() => {
+    const historyTeams = sessions.flatMap(s => [s.equipe, s.adversaire]).filter(Boolean)
+    const refTeams = clubs.map(c => c.nom).filter(Boolean)
+    return Array.from(new Set([...historyTeams, ...refTeams]))
+  }, [sessions, clubs])
+
+  // Dictionnaire { [nomClub]: ville } issu de la table clubs
+  const clubCityMap = useMemo(() => {
+    const map = {}
+    clubs.forEach((c) => {
+      if (c.nom && c.ville) {
+        map[c.nom] = c.ville
+      }
+    })
+    return map
+  }, [clubs])
 
   const defaultLieu = useMemo(
     () => sessions.find(s => s.lieu)?.lieu || '',
@@ -89,6 +112,7 @@ export function useSessions() {
     availableSeasons,
     filteredSessions,
     knownTeams,
+    clubCityMap,
     defaultLieu,
     defaultEquipe,
     records,

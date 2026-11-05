@@ -303,3 +303,25 @@ export function calculateWeeklySummary(sessions = [], referenceDate = new Date()
     weekHistory: [...previousWeeks, current]
   }
 }
+
+/**
+ * Filtre les suggestions de clubs par nom de club ou par ville associée
+ */
+export function filterClubSuggestions(query, teamNames = [], clubCityMap = {}, limit = 25) {
+  const uniqueTeams = Array.from(new Set(teamNames.filter(Boolean)))
+  const cleanQuery = (query || '').trim().toLowerCase()
+
+  if (!cleanQuery) {
+    return uniqueTeams.slice(0, limit)
+  }
+
+  return uniqueTeams
+    .filter((club) => {
+      const nameLower = club.toLowerCase()
+      if (nameLower === cleanQuery) return false
+      const cityLower = (clubCityMap[club] || '').toLowerCase()
+      return nameLower.includes(cleanQuery) || cityLower.includes(cleanQuery)
+    })
+    .slice(0, limit)
+}
+
