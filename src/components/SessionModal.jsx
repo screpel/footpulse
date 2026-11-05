@@ -4,7 +4,7 @@ import { X, CloudRain, Save, Loader2, Trash2, Flame } from 'lucide-react'
 import { sessionRepository } from '../services/sessionRepository'
 import { clubRepository } from '../services/clubRepository'
 import { getHistoricalWeather } from '../services/weather'
-import { calculateFosterLoad } from '../domain/sessionMetrics'
+import { calculateFosterLoad, resolveCityForClub } from '../domain/sessionMetrics'
 import { toSessionFormState, toSessionPayload } from '../domain/sessionMapper'
 import { getRpeTheme } from './rpeTheme'
 import TeamInput from './TeamInput'
@@ -22,6 +22,7 @@ export default function SessionModal({
     const [loading, setLoading] = useState(false)
     const [deleting, setDeleting] = useState(false)
     const [fetchingWeather, setFetchingWeather] = useState(false)
+    const [matchVenue, setMatchVenue] = useState('DOMICILE') // 'DOMICILE' | 'EXTERIEUR'
     const [form, setForm] = useState(() =>
         toSessionFormState(sessionToEdit, { lieu: defaultLieu, equipe: defaultEquipe })
     )
@@ -30,6 +31,33 @@ export default function SessionModal({
 
     const isEditMode = Boolean(sessionToEdit)
     const isMatch = form.type_seance === 'MATCH'
+
+    const handleEquipeChange = (val, explicitCity) => {
+        const matchedCity = explicitCity || resolveCityForClub(val, clubCityMap)
+        setForm(prev => ({
+            ...prev,
+            equipe: val,
+            lieu: matchedCity || prev.lieu
+        }))
+    }
+
+    const handleAdversaireChange = (val, explicitCity) => {
+        const matchedCity = explicitCity || resolveCityForClub(val, clubCityMap)
+        setForm(prev => ({
+            ...prev,
+            adversaire: val,
+            lieu: matchVenue === 'EXTERIEUR' && matchedCity ? matchedCity : prev.lieu
+        }))
+    }
+
+    const handleVenueSwitch = (venue) => {
+        setMatchVenue(venue)
+        const targetClub = venue === 'EXTERIEUR' ? form.adversaire : form.equipe
+        const matchedCity = resolveCityForClub(targetClub, clubCityMap)
+        if (matchedCity) {
+            setForm(prev => ({ ...prev, lieu: matchedCity }))
+        }
+    }
 
     const totalTempsSecPreview =
         (parseInt(form.temps_activite_min || 0, 10) * 60) + parseInt(form.temps_activite_sec || 0, 10)
@@ -171,16 +199,42 @@ export default function SessionModal({
                     {/* Section Match */}
                     {isMatch && (
                         <div className="bg-slate-950/70 p-3 rounded-xl border border-emerald-500/30 space-y-3">
-                            <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider block">
-                                Rencontre & Score
-                            </span>
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">
+                                    Rencontre & Score
+                                </span>
+                                <div className="flex bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[10px] font-semibold">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleVenueSwitch('DOMICILE')}
+                                        className={`px-2 py-0.5 rounded-md transition-colors ${
+                                            matchVenue === 'DOMICILE'
+                                                ? 'bg-emerald-500/20 text-emerald-400'
+                                                : 'text-slate-400 hover:text-slate-200'
+                                        }`}
+                                    >
+                                        Domicile
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleVenueSwitch('EXTERIEUR')}
+                                        className={`px-2 py-0.5 rounded-md transition-colors ${
+                                            matchVenue === 'EXTERIEUR'
+                                                ? 'bg-sky-500/20 text-sky-400'
+                                                : 'text-slate-400 hover:text-slate-200'
+                                        }`}
+                                    >
+                                        Extérieur
+                                    </button>
+                                </div>
+                            </div>
 
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
                                     <label className="text-slate-400 block mb-1">Notre équipe</label>
                                     <TeamInput
                                         value={form.equipe}
-                                        onChange={(val) => setForm({ ...form, equipe: val })}
+                                        onChange={handleEquipeChange}
                                         placeholder="Notre équipe..."
                                         existingTeams={knownTeams}
                                         clubCityMap={clubCityMap}
@@ -190,7 +244,7 @@ export default function SessionModal({
                                     <label className="text-slate-400 block mb-1">Adversaire</label>
                                     <TeamInput
                                         value={form.adversaire}
-                                        onChange={(val) => setForm({ ...form, adversaire: val })}
+                                        onChange={handleAdversaireChange}
                                         placeholder="Nom du club..."
                                         existingTeams={knownTeams}
                                         clubCityMap={clubCityMap}

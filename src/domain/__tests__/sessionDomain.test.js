@@ -11,7 +11,8 @@ import {
   evaluateSessionRecords,
   calculateMatchSummary,
   calculateWeeklySummary,
-  filterClubSuggestions
+  filterClubSuggestions,
+  resolveCityForClub
 } from '../sessionMetrics.js'
 import {
   getSeasonFromDate,
@@ -161,6 +162,10 @@ describe('Domain - sessionMetrics', () => {
     assert.deepEqual(filterClubSuggestions('littoral', teams, cityMap), ['AS Littoral'])
     assert.deepEqual(filterClubSuggestions('ville-sud', teams, cityMap), ['Racing Club Sud'])
     assert.deepEqual(filterClubSuggestions('AS Littoral', teams, cityMap), [])
+
+    assert.equal(resolveCityForClub('Olympique Nord (U13F)', cityMap), 'Ville-Nord')
+    assert.equal(resolveCityForClub('Racing Club Sud', cityMap), 'Ville-Sud')
+    assert.equal(resolveCityForClub('Club Inconnu', cityMap), null)
   })
 })
 

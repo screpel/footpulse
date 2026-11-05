@@ -325,3 +325,31 @@ export function filterClubSuggestions(query, teamNames = [], clubCityMap = {}, l
     .slice(0, limit)
 }
 
+/**
+ * Résout automatiquement la ville associée à un nom de club (exact ou avec suffixe ex: "(U13F)")
+ */
+export function resolveCityForClub(clubName, clubCityMap = {}) {
+  if (!clubName || typeof clubName !== 'string') return null
+  const clean = clubName.trim()
+  if (!clean) return null
+
+  if (clubCityMap[clean]) return clubCityMap[clean]
+
+  const lower = clean.toLowerCase()
+  const entries = Object.entries(clubCityMap)
+
+  for (const [nom, ville] of entries) {
+    if (nom.toLowerCase() === lower) return ville
+  }
+
+  for (const [nom, ville] of entries) {
+    const nomLower = nom.toLowerCase()
+    if (nomLower.length >= 4 && (lower.includes(nomLower) || nomLower.includes(lower))) {
+      return ville
+    }
+  }
+
+  return null
+}
+
+

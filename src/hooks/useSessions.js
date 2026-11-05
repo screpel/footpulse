@@ -2,7 +2,11 @@
 import { useState, useCallback, useMemo } from 'react'
 import { sessionRepository } from '../services/sessionRepository'
 import { clubRepository } from '../services/clubRepository'
-import { calculatePersonalRecords, calculateMatchSummary } from '../domain/sessionMetrics'
+import {
+  calculatePersonalRecords,
+  calculateMatchSummary,
+  resolveCityForClub
+} from '../domain/sessionMetrics'
 import {
   getSeasonFromDate,
   getAvailableSeasons,
@@ -75,15 +79,20 @@ export function useSessions() {
     return map
   }, [clubs])
 
-  const defaultLieu = useMemo(
-    () => sessions.find(s => s.lieu)?.lieu || '',
-    [sessions]
-  )
-
   const defaultEquipe = useMemo(
     () => sessions.find(s => s.equipe)?.equipe || '',
     [sessions]
   )
+
+  const defaultLieu = useMemo(() => {
+    const cityFromHomeClub = resolveCityForClub(defaultEquipe, clubCityMap)
+    if (cityFromHomeClub) return cityFromHomeClub
+    const trainingLieu = sessions.find(
+      s => s.type_seance === 'ENTRAINEMENT' && s.lieu
+    )?.lieu
+    if (trainingLieu) return trainingLieu
+    return ''
+  }, [sessions, defaultEquipe, clubCityMap])
 
   const records = useMemo(() => calculatePersonalRecords(seasonSessions), [seasonSessions])
   const bilanMatchs = useMemo(() => calculateMatchSummary(seasonSessions), [seasonSessions])
