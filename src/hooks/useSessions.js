@@ -52,18 +52,25 @@ export function useSessions() {
     return sessions.filter(s => getSeasonFromDate(s.date_seance) === selectedSeason)
   }, [sessions, selectedSeason])
 
-  // Séances filtrées par type (Match / Entraînement) au sein de la saison active
+  // Séances filtrées par type (Match / Tournoi / Entraînement) au sein de la saison active
   const filteredSessions = useMemo(() => {
     return seasonSessions.filter((s) => {
       if (filterType === 'MATCH') return s.type_seance === 'MATCH'
+      if (filterType === 'TOURNOI') return s.type_seance === 'TOURNOI'
       if (filterType === 'ENTRAINEMENT') return s.type_seance === 'ENTRAINEMENT'
       return true
     })
   }, [seasonSessions, filterType])
 
-  // Fusion des clubs de l'historique et du référentiel public.clubs
+  // Fusion des clubs de l'historique (y compris adversaires de tournoi) et du référentiel public.clubs
   const knownTeams = useMemo(() => {
-    const historyTeams = sessions.flatMap(s => [s.equipe, s.adversaire]).filter(Boolean)
+    const historyTeams = sessions
+      .flatMap(s => [
+        s.equipe,
+        s.adversaire,
+        ...(Array.isArray(s.matchs_tournoi) ? s.matchs_tournoi.map(m => m.adversaire) : [])
+      ])
+      .filter(Boolean)
     const refTeams = clubs.map(c => c.nom).filter(Boolean)
     return Array.from(new Set([...historyTeams, ...refTeams]))
   }, [sessions, clubs])
@@ -105,6 +112,10 @@ export function useSessions() {
     () => seasonSessions.filter(s => s.type_seance === 'MATCH').length,
     [seasonSessions]
   )
+  const tournoiCount = useMemo(
+    () => seasonSessions.filter(s => s.type_seance === 'TOURNOI').length,
+    [seasonSessions]
+  )
   const trainCount = useMemo(
     () => seasonSessions.filter(s => s.type_seance === 'ENTRAINEMENT').length,
     [seasonSessions]
@@ -131,6 +142,7 @@ export function useSessions() {
     weatherImpact,
     seasonTotals,
     matchCount,
+    tournoiCount,
     trainCount,
     refreshSessions,
     clearSessions

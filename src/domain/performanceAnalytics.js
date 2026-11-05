@@ -112,10 +112,12 @@ export function calculatePlayerProfile(sessions = []) {
 }
 
 /**
- * Compare les performances moyennes en Match officiel vs Entraînement
+ * Compare les performances moyennes en Compétition (Match officiel / Tournoi) vs Entraînement
  */
 export function calculateMatchVsTraining(sessions = []) {
-  const matches = sessions.filter(s => s.type_seance === 'MATCH')
+  const matches = sessions.filter(
+    s => s.type_seance === 'MATCH' || s.type_seance === 'TOURNOI'
+  )
   const trainings = sessions.filter(s => s.type_seance === 'ENTRAINEMENT')
 
   const computeGroupStats = (list) => {
@@ -309,6 +311,7 @@ export function calculateWeatherImpact(sessions = []) {
 export function calculateSeasonTotalsAndGoals(sessions = []) {
   const totalSessions = sessions.length
   const totalMatches = sessions.filter(s => s.type_seance === 'MATCH').length
+  const totalTournaments = sessions.filter(s => s.type_seance === 'TOURNOI').length
   const totalTrainings = sessions.filter(s => s.type_seance === 'ENTRAINEMENT').length
 
   const totalDistanceKm = Number(
@@ -319,10 +322,10 @@ export function calculateSeasonTotalsAndGoals(sessions = []) {
   const totalHighIntensityM = sessions.reduce((sum, s) => sum + Number(s.haute_intensite_m || 0), 0)
   const totalShots = sessions.reduce((sum, s) => sum + Number(s.tirs || 0), 0)
   const totalGoals = sessions
-    .filter(s => s.type_seance === 'MATCH')
+    .filter(s => s.type_seance === 'MATCH' || s.type_seance === 'TOURNOI')
     .reduce((sum, s) => sum + Number(s.buts_reels || 0), 0)
   const totalAssists = sessions
-    .filter(s => s.type_seance === 'MATCH')
+    .filter(s => s.type_seance === 'MATCH' || s.type_seance === 'TOURNOI')
     .reduce((sum, s) => sum + Number(s.passes_d_reelles || 0), 0)
   const totalCharge = sessions.reduce((sum, s) => {
     const load = calculateFosterLoad(s.temps_activite_sec, s.rpe)
@@ -365,6 +368,7 @@ export function calculateSeasonTotalsAndGoals(sessions = []) {
   return {
     totalSessions,
     totalMatches,
+    totalTournaments,
     totalTrainings,
     totalDistanceKm,
     totalDurationSec,

@@ -8,6 +8,7 @@ export default function SeasonGoalsTab({ seasonTotals, selectedSeason }) {
   const {
     totalSessions,
     totalMatches,
+    totalTournaments = 0,
     totalTrainings,
     totalDistanceKm,
     totalDurationSec,
@@ -32,7 +33,7 @@ export default function SeasonGoalsTab({ seasonTotals, selectedSeason }) {
             Cumul de la saison ({selectedSeason === 'ALL' ? 'Toutes saisons' : selectedSeason})
           </h2>
           <span className="text-[11px] text-slate-400">
-            {totalSessions} séances ({totalMatches}M • {totalTrainings}E)
+            {totalSessions} séances ({totalMatches}M • {totalTournaments}T • {totalTrainings}E)
           </span>
         </div>
 

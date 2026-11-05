@@ -9,6 +9,7 @@ import {
   calculateSessionComparison,
   calculatePersonalRecords,
   evaluateSessionRecords,
+  summarizeTournamentMatches,
   calculateMatchSummary,
   calculateWeeklySummary,
   filterClubSuggestions,
@@ -101,14 +102,32 @@ describe('Domain - sessionMetrics', () => {
     assert.equal(evalS1.hasAnyRecord, true)
   })
 
-  it('calcule le bilan des matchs (V / N / D, bp, bc)', () => {
+  it('calcule le bilan des matchs (V / N / D, bp, bc) incluant les rencontres de tournoi', () => {
+    const tournoiMatches = [
+      { adversaire: 'Club A', score_equipe: 2, score_adversaire: 0, buts: 1, passes_d: 1 },
+      { adversaire: 'Club B', score_equipe: 1, score_adversaire: 1, buts: 1, passes_d: 0 }
+    ]
+    const tStats = summarizeTournamentMatches(tournoiMatches)
+    assert.deepEqual(tStats, {
+      totalMatches: 2,
+      joues: 2,
+      v: 1,
+      n: 1,
+      d: 0,
+      bp: 3,
+      bc: 1,
+      buts: 2,
+      passesD: 1
+    })
+
     const summary = calculateMatchSummary([
       { type_seance: 'MATCH', score_equipe: 3, score_adversaire: 1 },
       { type_seance: 'MATCH', score_equipe: 2, score_adversaire: 2 },
       { type_seance: 'MATCH', score_equipe: 0, score_adversaire: 1 },
+      { type_seance: 'TOURNOI', nom_tournoi: 'Cup Régionale', matchs_tournoi: tournoiMatches },
       { type_seance: 'ENTRAINEMENT', score_equipe: null, score_adversaire: null }
     ])
-    assert.deepEqual(summary, { joues: 3, v: 1, n: 1, d: 1, bp: 5, bc: 4 })
+    assert.deepEqual(summary, { joues: 5, v: 2, n: 2, d: 1, bp: 8, bc: 5 })
   })
 
   it('agrège la charge hebdomadaire du lundi au dimanche et l’historique sur 5 semaines', () => {
@@ -279,7 +298,7 @@ describe('Domain - performanceAnalytics (Saison, Radar, Météo)', () => {
 })
 
 describe('Domain - sessionMapper', () => {
-  it('convertit un formulaire MATCH et ENTRAINEMENT en payload normalisé', () => {
+  it('convertit un formulaire MATCH, TOURNOI et ENTRAINEMENT en payload normalisé', () => {
     const formState = toSessionFormState(null, { lieu: 'Stade A', equipe: 'Équipe A' })
     const trainingPayload = toSessionPayload({
       ...formState,
@@ -295,7 +314,31 @@ describe('Domain - sessionMapper', () => {
 
     assert.equal(trainingPayload.adversaire, null)
     assert.equal(trainingPayload.score_equipe, null)
+    assert.equal(trainingPayload.nom_tournoi, null)
+    assert.deepEqual(trainingPayload.matchs_tournoi, [])
     assert.equal(trainingPayload.temps_activite_sec, 3630)
     assert.equal(trainingPayload.rpe, 7)
+
+    const tournoiPayload = toSessionPayload({
+      ...formState,
+      type_seance: 'TOURNOI',
+      nom_tournoi: '  Tournoi de Printemps  ',
+      matchs_tournoi: [
+        { adversaire: 'Club X', score_equipe: '2', score_adversaire: '0', buts: '2', passes_d: '1' },
+        { adversaire: 'Club Y', score_equipe: '1', score_adversaire: '1', buts: '1', passes_d: '0' },
+        { adversaire: '', score_equipe: '', score_adversaire: '', buts: 0, passes_d: 0 }
+      ],
+      temps_activite_min: '75',
+      temps_activite_sec: '0',
+      distance_km: '6.8',
+      sprint_max_kmh: '21.5',
+      rpe: 9
+    })
+
+    assert.equal(tournoiPayload.nom_tournoi, 'Tournoi de Printemps')
+    assert.equal(tournoiPayload.matchs_tournoi.length, 2)
+    assert.equal(tournoiPayload.buts_reels, 3)
+    assert.equal(tournoiPayload.passes_d_reelles, 1)
+    assert.equal(tournoiPayload.adversaire, null)
   })
 })

@@ -1,11 +1,19 @@
 // src/components/SessionModal.jsx
 import { useState } from 'react'
-import { X, CloudRain, Save, Loader2, Trash2, Flame } from 'lucide-react'
+import { X, CloudRain, Save, Loader2, Trash2, Flame, Trophy, Plus } from 'lucide-react'
 import { sessionRepository } from '../services/sessionRepository'
 import { clubRepository } from '../services/clubRepository'
 import { getHistoricalWeather } from '../services/weather'
-import { calculateFosterLoad, resolveCityForClub } from '../domain/sessionMetrics'
-import { toSessionFormState, toSessionPayload } from '../domain/sessionMapper'
+import {
+    calculateFosterLoad,
+    resolveCityForClub,
+    summarizeTournamentMatches
+} from '../domain/sessionMetrics'
+import {
+    createEmptyTournamentMatch,
+    toSessionFormState,
+    toSessionPayload
+} from '../domain/sessionMapper'
 import { getRpeTheme } from './rpeTheme'
 import TeamInput from './TeamInput'
 
@@ -31,6 +39,8 @@ export default function SessionModal({
 
     const isEditMode = Boolean(sessionToEdit)
     const isMatch = form.type_seance === 'MATCH'
+    const isTournoi = form.type_seance === 'TOURNOI'
+    const tournoiSummary = summarizeTournamentMatches(form.matchs_tournoi)
 
     const handleEquipeChange = (val, explicitCity) => {
         const matchedCity = explicitCity || resolveCityForClub(val, clubCityMap)
@@ -57,6 +67,35 @@ export default function SessionModal({
         if (matchedCity) {
             setForm(prev => ({ ...prev, lieu: matchedCity }))
         }
+    }
+
+    const handleTournoiMatchChange = (index, field, value) => {
+        setForm(prev => {
+            const nextMatches = [...(prev.matchs_tournoi || [])]
+            nextMatches[index] = {
+                ...nextMatches[index],
+                [field]: value
+            }
+            return { ...prev, matchs_tournoi: nextMatches }
+        })
+    }
+
+    const handleAddTournoiMatch = () => {
+        setForm(prev => ({
+            ...prev,
+            matchs_tournoi: [...(prev.matchs_tournoi || []), createEmptyTournamentMatch()]
+        }))
+    }
+
+    const handleRemoveTournoiMatch = (index) => {
+        setForm(prev => {
+            const current = prev.matchs_tournoi || []
+            if (current.length <= 1) return prev
+            return {
+                ...prev,
+                matchs_tournoi: current.filter((_, i) => i !== index)
+            }
+        })
     }
 
     const totalTempsSecPreview =
@@ -106,9 +145,14 @@ export default function SessionModal({
         if (error) {
             alert("Erreur lors de l'enregistrement : " + error.message)
         } else {
+            const tournoiClubs = (payload.matchs_tournoi || []).map(m => ({
+                nom: m.adversaire,
+                ville: null
+            }))
             await clubRepository.ensureClubsExist([
                 { nom: payload.equipe, ville: null },
-                { nom: payload.adversaire, ville: null }
+                { nom: payload.adversaire, ville: null },
+                ...tournoiClubs
             ])
             onSessionSaved()
             onClose()
@@ -139,6 +183,7 @@ export default function SessionModal({
                             >
                                 <option value="ENTRAINEMENT">Entraînement</option>
                                 <option value="MATCH">Match officiel</option>
+                                <option value="TOURNOI">Tournoi / Plateau</option>
                             </select>
                         </div>
                         <div>
@@ -196,7 +241,169 @@ export default function SessionModal({
                         </button>
                     </div>
 
-                    {/* Section Match */}
+                    {/* Section Tournoi (Plusieurs matchs) */}
+                    {isTournoi && (
+                        <div className="bg-slate-950/70 p-3 rounded-xl border border-amber-500/30 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1.5">
+                                    <Trophy className="w-3.5 h-3.5" />
+                                    Tournoi & Rencontres
+                                </span>
+                                <span className="text-[10px] font-mono text-slate-300 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-md">
+                                    {tournoiSummary.joues}M • {tournoiSummary.v}V {tournoiSummary.n}N {tournoiSummary.d}D
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label className="text-slate-400 block mb-1">Nom du tournoi</label>
+                                    <input
+                                        type="text"
+                                        value={form.nom_tournoi}
+                                        onChange={e => setForm({...form, nom_tournoi: e.target.value})}
+                                        placeholder="ex: Pitch Cup..."
+                                        className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-white font-medium"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-slate-400 block mb-1">Notre équipe</label>
+                                    <TeamInput
+                                        value={form.equipe}
+                                        onChange={handleEquipeChange}
+                                        placeholder="Notre équipe..."
+                                        existingTeams={knownTeams}
+                                        clubCityMap={clubCityMap}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 pt-1 border-t border-slate-800/80">
+                                {(form.matchs_tournoi || []).map((m, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 space-y-2"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[10px] font-bold text-amber-400 uppercase">
+                                                Match #{idx + 1}
+                                            </span>
+                                            {(form.matchs_tournoi || []).length > 1 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveTournoiMatch(idx)}
+                                                    className="text-slate-500 hover:text-rose-400 p-0.5 transition-colors"
+                                                    title="Retirer ce match"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div className="grid grid-cols-12 gap-2 items-end">
+                                            <div className="col-span-7">
+                                                <label className="text-[10px] text-slate-400 block mb-0.5">
+                                                    Adversaire
+                                                </label>
+                                                <TeamInput
+                                                    value={m.adversaire}
+                                                    onChange={(val) =>
+                                                        handleTournoiMatchChange(idx, 'adversaire', val)
+                                                    }
+                                                    placeholder="Club adverse..."
+                                                    existingTeams={knownTeams}
+                                                    clubCityMap={clubCityMap}
+                                                />
+                                            </div>
+                                            <div className="col-span-5">
+                                                <label className="text-[10px] text-slate-400 block mb-0.5 text-center">
+                                                    Score (Nous - Adv.)
+                                                </label>
+                                                <div className="flex items-center justify-center gap-1 bg-slate-950 border border-slate-800 rounded-lg p-1">
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        placeholder="0"
+                                                        value={m.score_equipe}
+                                                        onChange={e =>
+                                                            handleTournoiMatchChange(
+                                                                idx,
+                                                                'score_equipe',
+                                                                e.target.value
+                                                            )
+                                                        }
+                                                        className="w-10 bg-slate-900 border border-slate-700 rounded py-1 text-center text-xs font-bold text-emerald-400"
+                                                    />
+                                                    <span className="text-slate-500 font-bold">-</span>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        placeholder="0"
+                                                        value={m.score_adversaire}
+                                                        onChange={e =>
+                                                            handleTournoiMatchChange(
+                                                                idx,
+                                                                'score_adversaire',
+                                                                e.target.value
+                                                            )
+                                                        }
+                                                        className="w-10 bg-slate-900 border border-slate-700 rounded py-1 text-center text-xs font-bold text-white"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className="flex items-center justify-between bg-slate-950/70 border border-slate-800/80 rounded-lg px-2.5 py-1">
+                                                <span className="text-[10px] text-slate-400">Buts joueuse</span>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    placeholder="0"
+                                                    value={m.buts}
+                                                    onChange={e =>
+                                                        handleTournoiMatchChange(idx, 'buts', e.target.value)
+                                                    }
+                                                    className="w-12 bg-slate-900 border border-slate-700 rounded py-0.5 text-center text-xs font-bold text-amber-400"
+                                                />
+                                            </div>
+                                            <div className="flex items-center justify-between bg-slate-950/70 border border-slate-800/80 rounded-lg px-2.5 py-1">
+                                                <span className="text-[10px] text-slate-400">Passes D.</span>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    placeholder="0"
+                                                    value={m.passes_d}
+                                                    onChange={e =>
+                                                        handleTournoiMatchChange(idx, 'passes_d', e.target.value)
+                                                    }
+                                                    className="w-12 bg-slate-900 border border-slate-700 rounded py-0.5 text-center text-xs font-bold text-emerald-400"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                <button
+                                    type="button"
+                                    onClick={handleAddTournoiMatch}
+                                    className="w-full py-2 rounded-xl border border-dashed border-amber-500/40 hover:border-amber-400 text-amber-400 hover:bg-amber-500/10 font-semibold flex items-center justify-center gap-1.5 transition-colors"
+                                >
+                                    <Plus className="w-3.5 h-3.5" />
+                                    Ajouter un match au tournoi
+                                </button>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-1 border-t border-slate-800/80 text-[10px] text-slate-400">
+                                <span>Cumul automatique sur le tournoi :</span>
+                                <span className="font-mono font-bold text-slate-200">
+                                    <span className="text-amber-400">{tournoiSummary.buts} but(s)</span>
+                                    {' • '}
+                                    <span className="text-emerald-400">{tournoiSummary.passesD} passe(s) D.</span>
+                                </span>
+                            </div>
+                        </div>
+                    )}
                     {isMatch && (
                         <div className="bg-slate-950/70 p-3 rounded-xl border border-emerald-500/30 space-y-3">
                             <div className="flex items-center justify-between">

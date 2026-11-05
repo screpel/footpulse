@@ -8,12 +8,14 @@ import {
   ChevronUp,
   MessageSquare,
   Award,
-  Share2
+  Share2,
+  Trophy
 } from 'lucide-react'
 import {
   calculateSessionRatios,
   calculateSessionComparison,
   evaluateSessionRecords,
+  summarizeTournamentMatches,
   formatDuration
 } from '../domain/sessionMetrics'
 import { getRpeTheme, getScoreBadgeStyle } from './rpeTheme'
@@ -80,6 +82,13 @@ export default function SessionCard({
     hasAnyRecord
   } = evaluateSessionRecords(session, records, totalSessionsCount)
 
+  const isMatch = session.type_seance === 'MATCH'
+  const isTournoi = session.type_seance === 'TOURNOI'
+  const isCompetition = isMatch || isTournoi
+  const tournoiStats = isTournoi
+    ? summarizeTournamentMatches(session.matchs_tournoi)
+    : null
+
   return (
     <div
       onClick={() => onToggleExpand(session.id)}
@@ -88,7 +97,7 @@ export default function SessionCard({
       <div className="flex justify-between items-start">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            {session.type_seance === 'MATCH' ? (
+            {isMatch ? (
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm text-emerald-400">
                   Match vs {session.adversaire || 'Adversaire'}
@@ -104,6 +113,19 @@ export default function SessionCard({
                       {session.score_equipe} - {session.score_adversaire}
                     </span>
                   )}
+              </div>
+            ) : isTournoi ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-sm text-amber-400 flex items-center gap-1.5">
+                  <Trophy className="w-3.5 h-3.5 shrink-0" />
+                  {session.nom_tournoi || 'Tournoi'}
+                </span>
+                {tournoiStats && tournoiStats.totalMatches > 0 && (
+                  <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded border bg-amber-500/15 text-amber-300 border-amber-500/30">
+                    {tournoiStats.totalMatches}M • {tournoiStats.v}V {tournoiStats.n}N{' '}
+                    {tournoiStats.d}D
+                  </span>
+                )}
               </div>
             ) : (
               <span className="font-bold text-sm text-white">Entraînement</span>
@@ -212,10 +234,10 @@ export default function SessionCard({
         </div>
         <div className="bg-slate-950/50 rounded-lg p-2">
           <span className="block text-[10px] text-slate-500 uppercase">
-            {session.type_seance === 'MATCH' ? 'Buts' : 'Tirs'}
+            {isCompetition ? 'Buts' : 'Tirs'}
           </span>
           <span className="text-xs font-semibold text-amber-400">
-            {session.type_seance === 'MATCH'
+            {isCompetition
               ? session.buts_reels || 0
               : session.tirs || 0}
           </span>
@@ -293,7 +315,63 @@ export default function SessionCard({
             </div>
           </div>
 
-          {session.type_seance === 'MATCH' && (
+          {isTournoi &&
+            Array.isArray(session.matchs_tournoi) &&
+            session.matchs_tournoi.length > 0 && (
+              <div className="bg-slate-950/60 border border-amber-500/20 rounded-xl p-2.5 space-y-1.5">
+                <div className="flex items-center justify-between text-[10px] uppercase font-bold text-amber-400 pb-1 border-b border-slate-800/80">
+                  <span>Rencontres du tournoi</span>
+                  {tournoiStats && (
+                    <span className="font-mono text-slate-400">
+                      {tournoiStats.bp} bp - {tournoiStats.bc} bc
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  {session.matchs_tournoi.map((m, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between text-xs bg-slate-900/80 rounded-lg px-2.5 py-1.5 border border-slate-800/60"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-[10px] font-mono text-slate-500">
+                          #{idx + 1}
+                        </span>
+                        <span className="font-medium text-slate-200 truncate">
+                          vs {m.adversaire || 'Adversaire'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {(Number(m.buts || 0) > 0 || Number(m.passes_d || 0) > 0) && (
+                          <span className="text-[10px] font-mono text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                            {Number(m.buts || 0) > 0 ? `${m.buts}B` : ''}
+                            {Number(m.buts || 0) > 0 && Number(m.passes_d || 0) > 0
+                              ? ' • '
+                              : ''}
+                            {Number(m.passes_d || 0) > 0 ? `${m.passes_d}PD` : ''}
+                          </span>
+                        )}
+                        {m.score_equipe !== null &&
+                          m.score_equipe !== undefined &&
+                          m.score_adversaire !== null &&
+                          m.score_adversaire !== undefined && (
+                            <span
+                              className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded border ${getScoreBadgeStyle(
+                                m.score_equipe,
+                                m.score_adversaire
+                              )}`}
+                            >
+                              {m.score_equipe} - {m.score_adversaire}
+                            </span>
+                          )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+          {isCompetition && (
             <div className="grid grid-cols-2 gap-2 text-center">
               <div className="bg-slate-950/40 rounded-lg p-1.5 flex justify-between items-center px-3">
                 <span className="text-[10px] text-slate-400">

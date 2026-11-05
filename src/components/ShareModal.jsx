@@ -1,7 +1,7 @@
 // src/components/ShareModal.jsx
 import { useEffect, useRef } from 'react'
 import { X, Download, Share2 } from 'lucide-react'
-import { formatDuration } from '../domain/sessionMetrics'
+import { formatDuration, summarizeTournamentMatches } from '../domain/sessionMetrics'
 
 export default function ShareModal({ isOpen, onClose, session }) {
     const canvasRef = useRef(null)
@@ -52,11 +52,24 @@ export default function ShareModal({ isOpen, onClose, session }) {
 
         // Badge Type de séance
         const isMatch = session.type_seance === 'MATCH'
-        const badgeLabel = isMatch ? 'MATCH OFFICIEL' : 'ENTRAÎNEMENT'
+        const isTournoi = session.type_seance === 'TOURNOI'
+        const isCompetition = isMatch || isTournoi
+        const badgeLabel = isTournoi
+            ? 'TOURNOI'
+            : isMatch
+            ? 'MATCH OFFICIEL'
+            : 'ENTRAÎNEMENT'
         ctx.font = 'bold 18px system-ui, -apple-system, sans-serif'
         const badgeW = ctx.measureText(badgeLabel).width + 36
-        roundRect(W - 64 - badgeW, 62, badgeW, 42, 12, isMatch ? 'rgba(16, 185, 129, 0.15)' : '#1e293b', isMatch ? '#10b981' : '#334155')
-        ctx.fillStyle = isMatch ? '#34d399' : '#e2e8f0'
+        const badgeFill = isTournoi
+            ? 'rgba(245, 158, 11, 0.15)'
+            : isMatch
+            ? 'rgba(16, 185, 129, 0.15)'
+            : '#1e293b'
+        const badgeStroke = isTournoi ? '#f59e0b' : isMatch ? '#10b981' : '#334155'
+        const badgeText = isTournoi ? '#fbbf24' : isMatch ? '#34d399' : '#e2e8f0'
+        roundRect(W - 64 - badgeW, 62, badgeW, 42, 12, badgeFill, badgeStroke)
+        ctx.fillStyle = badgeText
         ctx.fillText(badgeLabel, W - 64 - badgeW + 18, 89)
 
         // Date, Lieu et Météo
@@ -76,7 +89,7 @@ export default function ShareModal({ isOpen, onClose, session }) {
         let currentY = 180
         const dureeStr = formatDuration(session.temps_activite_sec)
 
-        // 3. Bloc Score (si Match) ou Résumé activité (si Entraînement)
+        // 3. Bloc Score (Match), Bilan Tournoi (Tournoi) ou Résumé activité (Entraînement)
         if (isMatch) {
             roundRect(64, currentY, W - 128, 130, 24, '#020617', '#1e293b')
 
@@ -102,6 +115,33 @@ export default function ShareModal({ isOpen, onClose, session }) {
 
             ctx.textAlign = 'left'
             currentY += 160
+        } else if (isTournoi) {
+            const tStats = summarizeTournamentMatches(session.matchs_tournoi)
+            roundRect(64, currentY, W - 128, 130, 24, '#020617', '#f59e0b')
+
+            ctx.font = '900 28px system-ui, -apple-system, sans-serif'
+            ctx.fillStyle = '#fbbf24'
+            ctx.fillText((session.nom_tournoi || 'Tournoi').slice(0, 28), 92, currentY + 52)
+
+            ctx.textAlign = 'right'
+            ctx.font = 'bold 24px monospace'
+            ctx.fillStyle = '#34d399'
+            ctx.fillText(
+                `${tStats.totalMatches}M • ${tStats.v}V ${tStats.n}N ${tStats.d}D (${tStats.bp}-${tStats.bc})`,
+                W - 92,
+                currentY + 52
+            )
+
+            ctx.textAlign = 'left'
+            const matchesLine = (session.matchs_tournoi || [])
+                .slice(0, 4)
+                .map(m => `${(m.adversaire || 'Adv.').slice(0, 12)} (${m.score_equipe ?? '-'}-${m.score_adversaire ?? '-'})`)
+                .join('  •  ')
+            ctx.font = '500 18px system-ui, -apple-system, sans-serif'
+            ctx.fillStyle = '#cbd5e1'
+            ctx.fillText(matchesLine || `${dureeStr} d'activité`, 92, currentY + 95)
+
+            currentY += 160
         } else {
             roundRect(64, currentY, W - 128, 90, 20, '#020617', '#1e293b')
             ctx.font = 'bold 26px system-ui, -apple-system, sans-serif'
@@ -123,8 +163,8 @@ export default function ShareModal({ isOpen, onClose, session }) {
             { label: 'HAUTE INTENSITÉ', value: `${session.haute_intensite_m || 0} m`, color: '#fb7185' },
             { label: 'ACCÉL. / DÉCÉL.', value: `${session.accelerations} / ${session.decelerations}`, color: '#e2e8f0' },
             {
-                label: isMatch ? 'BUTS / PASSES DÉC.' : 'FRAPPE MAX',
-                value: isMatch ? `${session.buts_reels || 0} / ${session.passes_d_reelles || 0}` : (session.tir_max_kmh > 0 ? `${session.tir_max_kmh} km/h` : `${dureeStr}`),
+                label: isCompetition ? 'BUTS / PASSES DÉC.' : 'FRAPPE MAX',
+                value: isCompetition ? `${session.buts_reels || 0} / ${session.passes_d_reelles || 0}` : (session.tir_max_kmh > 0 ? `${session.tir_max_kmh} km/h` : `${dureeStr}`),
                 color: '#f43f5e'
             }
         ]

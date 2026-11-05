@@ -107,7 +107,7 @@ export function calculatePersonalRecords(sessions = []) {
   const distMax = Math.max(...sessions.map(s => Number(s.distance_km || 0)))
   const passesMax = Math.max(...sessions.map(s => Number(s.passes || 0)))
   const butsEnMatch = sessions
-    .filter(s => s.type_seance === 'MATCH')
+    .filter(s => s.type_seance === 'MATCH' || s.type_seance === 'TOURNOI')
     .reduce((acc, s) => acc + Number(s.buts_reels || 0), 0)
 
   return { sprintMax, tirMax, distMax, passesMax, butsEnMatch }
@@ -142,21 +142,59 @@ export function evaluateSessionRecords(session, records, totalSessionsCount) {
 }
 
 /**
+ * Résume les rencontres d'un tournoi (Matchs joués, V/N/D, Buts pour/contre, Buts & Passes D. joueuse)
+ */
+export function summarizeTournamentMatches(matchsTournoi = []) {
+  const list = Array.isArray(matchsTournoi) ? matchsTournoi : []
+  return list.reduce(
+    (acc, m) => {
+      const hasAdv = Boolean((m?.adversaire || '').trim())
+      const hasScore =
+        m?.score_equipe !== null &&
+        m?.score_equipe !== undefined &&
+        m?.score_equipe !== '' &&
+        m?.score_adversaire !== null &&
+        m?.score_adversaire !== undefined &&
+        m?.score_adversaire !== ''
+
+      if (hasAdv || hasScore) {
+        acc.totalMatches += 1
+      }
+      acc.buts += Number(m?.buts || 0)
+      acc.passesD += Number(m?.passes_d || 0)
+
+      if (hasScore) {
+        const eq = Number(m.score_equipe)
+        const adv = Number(m.score_adversaire)
+        acc.joues += 1
+        acc.bp += eq
+        acc.bc += adv
+        if (eq > adv) acc.v += 1
+        else if (eq === adv) acc.n += 1
+        else acc.d += 1
+      }
+      return acc
+    },
+    { totalMatches: 0, joues: 0, v: 0, n: 0, d: 0, bp: 0, bc: 0, buts: 0, passesD: 0 }
+  )
+}
+
+/**
  * Calcule le bilan global des matchs (Victoires, Nuls, Défaites, Buts pour/contre)
+ * Inclut les matchs officiels ET chacune des rencontres disputées en tournoi
  */
 export function calculateMatchSummary(sessions = []) {
-  return sessions
-    .filter(s => s.type_seance === 'MATCH')
-    .reduce(
-      (acc, m) => {
+  return sessions.reduce(
+    (acc, s) => {
+      if (s.type_seance === 'MATCH') {
         if (
-          m.score_equipe !== null &&
-          m.score_equipe !== undefined &&
-          m.score_adversaire !== null &&
-          m.score_adversaire !== undefined
+          s.score_equipe !== null &&
+          s.score_equipe !== undefined &&
+          s.score_adversaire !== null &&
+          s.score_adversaire !== undefined
         ) {
-          const eq = Number(m.score_equipe)
-          const adv = Number(m.score_adversaire)
+          const eq = Number(s.score_equipe)
+          const adv = Number(s.score_adversaire)
           acc.joues += 1
           acc.bp += eq
           acc.bc += adv
@@ -164,10 +202,19 @@ export function calculateMatchSummary(sessions = []) {
           else if (eq === adv) acc.n += 1
           else acc.d += 1
         }
-        return acc
-      },
-      { joues: 0, v: 0, n: 0, d: 0, bp: 0, bc: 0 }
-    )
+      } else if (s.type_seance === 'TOURNOI' && Array.isArray(s.matchs_tournoi)) {
+        const tSummary = summarizeTournamentMatches(s.matchs_tournoi)
+        acc.joues += tSummary.joues
+        acc.v += tSummary.v
+        acc.n += tSummary.n
+        acc.d += tSummary.d
+        acc.bp += tSummary.bp
+        acc.bc += tSummary.bc
+      }
+      return acc
+    },
+    { joues: 0, v: 0, n: 0, d: 0, bp: 0, bc: 0 }
+  )
 }
 
 /**
@@ -215,7 +262,10 @@ export function calculateWeeklySummary(sessions = [], referenceDate = new Date()
       return d && d >= start && d <= end
     })
     const totalSessions = inWeek.length
-    const matchCount = inWeek.filter(s => s.type_seance === 'MATCH').length
+    const matchCount = inWeek.filter(
+      s => s.type_seance === 'MATCH' || s.type_seance === 'TOURNOI'
+    ).length
+    const tournoiCount = inWeek.filter(s => s.type_seance === 'TOURNOI').length
     const trainCount = inWeek.filter(s => s.type_seance === 'ENTRAINEMENT').length
     const totalDistanceKm = inWeek.reduce((acc, s) => acc + Number(s.distance_km || 0), 0)
     const totalHighIntensityM = inWeek.reduce((acc, s) => acc + Number(s.haute_intensite_m || 0), 0)
@@ -229,6 +279,7 @@ export function calculateWeeklySummary(sessions = [], referenceDate = new Date()
       sunday: end,
       totalSessions,
       matchCount,
+      tournoiCount,
       trainCount,
       totalDistanceKm,
       totalHighIntensityM,

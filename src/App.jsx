@@ -44,6 +44,7 @@ export default function App() {
     weatherImpact,
     seasonTotals,
     matchCount,
+    tournoiCount,
     trainCount,
     refreshSessions,
     clearSessions
@@ -180,7 +181,7 @@ export default function App() {
                 Historique des séances
               </h2>
 
-              <div className="flex bg-slate-900 p-1 rounded-xl border border-slate-800 text-[11px] font-medium self-start sm:self-auto">
+              <div className="flex flex-wrap bg-slate-900 p-1 rounded-xl border border-slate-800 text-[11px] font-medium self-start sm:self-auto">
                 <button
                   onClick={() => setFilterType('ALL')}
                   className={`px-2.5 py-1 rounded-lg transition-colors ${
@@ -200,6 +201,16 @@ export default function App() {
                   }`}
                 >
                   Matchs ({matchCount})
+                </button>
+                <button
+                  onClick={() => setFilterType('TOURNOI')}
+                  className={`px-2.5 py-1 rounded-lg transition-colors ${
+                    filterType === 'TOURNOI'
+                      ? 'bg-amber-500/20 text-amber-400 font-bold'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  Tournois ({tournoiCount})
                 </button>
                 <button
                   onClick={() => setFilterType('ENTRAINEMENT')}

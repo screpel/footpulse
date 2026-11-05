@@ -117,7 +117,9 @@ export default function ProgressionChart({ sessions }) {
                                 day: '2-digit',
                                 month: '2-digit'
                             })
-                            const isMatch = chronological[i].type_seance === 'MATCH'
+                            const isMatch =
+                                chronological[i].type_seance === 'MATCH' ||
+                                chronological[i].type_seance === 'TOURNOI'
 
                             return (
                                 <g key={i}>
@@ -159,7 +161,7 @@ export default function ProgressionChart({ sessions }) {
                 </div>
 
                 <div className="flex justify-between items-center text-[10px] text-slate-500 pt-1 border-t border-slate-800/60">
-                    <span>Points pleins / dates vertes = Matchs officiels</span>
+                    <span>Points pleins / dates vertes = Matchs & Tournois</span>
                     <span>{chronological.length} dernières séances</span>
                 </div>
             </div>
