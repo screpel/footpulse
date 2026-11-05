@@ -28,8 +28,8 @@ export function toSessionFormState(sessionToEdit, defaults = {}) {
       sessionToEdit.matchs_tournoi.length > 0
       ? sessionToEdit.matchs_tournoi.map(m => ({
           adversaire: m.adversaire || '',
-          score_equipe: m.score_equipe ?? '',
-          score_adversaire: m.score_adversaire ?? '',
+          score_equipe: m.score_equipe ?? 0,
+          score_adversaire: m.score_adversaire ?? 0,
           buts: m.buts ?? 0,
           passes_d: m.passes_d ?? 0
         }))
@@ -114,31 +114,30 @@ export function toSessionPayload(form) {
   const rawTournoiMatches = Array.isArray(form.matchs_tournoi) ? form.matchs_tournoi : []
   const cleanTournoiMatches = isTournoi
     ? rawTournoiMatches
+        .filter(
+          m =>
+            (m.adversaire || '').trim().length > 0 ||
+            (m.score_equipe !== '' && m.score_equipe !== null && m.score_equipe !== undefined) ||
+            (m.score_adversaire !== '' && m.score_adversaire !== null && m.score_adversaire !== undefined) ||
+            parseInt(m.buts || 0, 10) > 0 ||
+            parseInt(m.passes_d || 0, 10) > 0
+        )
         .map(m => ({
           adversaire: (m.adversaire || '').trim(),
-          score_equipe:
-            m.score_equipe !== '' && m.score_equipe !== null && m.score_equipe !== undefined
-              ? parseInt(m.score_equipe, 10)
-              : null,
-          score_adversaire:
-            m.score_adversaire !== '' && m.score_adversaire !== null && m.score_adversaire !== undefined
-              ? parseInt(m.score_adversaire, 10)
-              : null,
+          score_equipe: parseInt(m.score_equipe || 0, 10),
+          score_adversaire: parseInt(m.score_adversaire || 0, 10),
           buts: parseInt(m.buts || 0, 10),
           passes_d: parseInt(m.passes_d || 0, 10)
         }))
-        .filter(
-          m =>
-            m.adversaire.length > 0 ||
-            m.score_equipe !== null ||
-            m.score_adversaire !== null ||
-            m.buts > 0 ||
-            m.passes_d > 0
-        )
     : []
 
   const tournoiButs = cleanTournoiMatches.reduce((acc, m) => acc + (m.buts || 0), 0)
   const tournoiPassesD = cleanTournoiMatches.reduce((acc, m) => acc + (m.passes_d || 0), 0)
+
+  const hasMatchScore =
+    isMatch &&
+    ((form.score_equipe !== '' && form.score_equipe !== null && form.score_equipe !== undefined) ||
+      (form.score_adversaire !== '' && form.score_adversaire !== null && form.score_adversaire !== undefined))
 
   return {
     date_seance: form.date_seance,
@@ -151,8 +150,8 @@ export function toSessionPayload(form) {
     nom_tournoi: isTournoi ? ((form.nom_tournoi || '').trim() || null) : null,
     matchs_tournoi: isTournoi ? cleanTournoiMatches : [],
     adversaire: isMatch ? (form.adversaire || null) : null,
-    score_equipe: isMatch && form.score_equipe !== '' ? parseInt(form.score_equipe, 10) : null,
-    score_adversaire: isMatch && form.score_adversaire !== '' ? parseInt(form.score_adversaire, 10) : null,
+    score_equipe: hasMatchScore ? parseInt(form.score_equipe || 0, 10) : null,
+    score_adversaire: hasMatchScore ? parseInt(form.score_adversaire || 0, 10) : null,
     buts_reels: isTournoi
       ? tournoiButs
       : isMatch

@@ -328,45 +328,44 @@ export default function SessionCard({
                   )}
                 </div>
                 <div className="space-y-1">
-                  {session.matchs_tournoi.map((m, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between text-xs bg-slate-900/80 rounded-lg px-2.5 py-1.5 border border-slate-800/60"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-[10px] font-mono text-slate-500">
-                          #{idx + 1}
-                        </span>
-                        <span className="font-medium text-slate-200 truncate">
-                          vs {m.adversaire || 'Adversaire'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {(Number(m.buts || 0) > 0 || Number(m.passes_d || 0) > 0) && (
-                          <span className="text-[10px] font-mono text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
-                            {Number(m.buts || 0) > 0 ? `${m.buts}B` : ''}
-                            {Number(m.buts || 0) > 0 && Number(m.passes_d || 0) > 0
-                              ? ' • '
-                              : ''}
-                            {Number(m.passes_d || 0) > 0 ? `${m.passes_d}PD` : ''}
+                  {session.matchs_tournoi.map((m, idx) => {
+                    const eqScore = Number(m.score_equipe ?? 0)
+                    const advScore = Number(m.score_adversaire ?? 0)
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between text-xs bg-slate-900/80 rounded-lg px-2.5 py-1.5 border border-slate-800/60"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-[10px] font-mono text-slate-500">
+                            #{idx + 1}
                           </span>
-                        )}
-                        {m.score_equipe !== null &&
-                          m.score_equipe !== undefined &&
-                          m.score_adversaire !== null &&
-                          m.score_adversaire !== undefined && (
-                            <span
-                              className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded border ${getScoreBadgeStyle(
-                                m.score_equipe,
-                                m.score_adversaire
-                              )}`}
-                            >
-                              {m.score_equipe} - {m.score_adversaire}
+                          <span className="font-medium text-slate-200 truncate">
+                            vs {m.adversaire || 'Adversaire'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {(Number(m.buts || 0) > 0 || Number(m.passes_d || 0) > 0) && (
+                            <span className="text-[10px] font-mono text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                              {Number(m.buts || 0) > 0 ? `${m.buts}B` : ''}
+                              {Number(m.buts || 0) > 0 && Number(m.passes_d || 0) > 0
+                                ? ' • '
+                                : ''}
+                              {Number(m.passes_d || 0) > 0 ? `${m.passes_d}PD` : ''}
                             </span>
                           )}
+                          <span
+                            className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded border ${getScoreBadgeStyle(
+                              eqScore,
+                              advScore
+                            )}`}
+                          >
+                            {eqScore} - {advScore}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </div>
             )}

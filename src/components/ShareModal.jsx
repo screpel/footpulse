@@ -135,7 +135,7 @@ export default function ShareModal({ isOpen, onClose, session }) {
             ctx.textAlign = 'left'
             const matchesLine = (session.matchs_tournoi || [])
                 .slice(0, 4)
-                .map(m => `${(m.adversaire || 'Adv.').slice(0, 12)} (${m.score_equipe ?? '-'}-${m.score_adversaire ?? '-'})`)
+                .map(m => `${(m.adversaire || 'Adv.').slice(0, 12)} (${m.score_equipe ?? 0}-${m.score_adversaire ?? 0})`)
                 .join('  •  ')
             ctx.font = '500 18px system-ui, -apple-system, sans-serif'
             ctx.fillStyle = '#cbd5e1'

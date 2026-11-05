@@ -105,17 +105,18 @@ describe('Domain - sessionMetrics', () => {
   it('calcule le bilan des matchs (V / N / D, bp, bc) incluant les rencontres de tournoi', () => {
     const tournoiMatches = [
       { adversaire: 'Club A', score_equipe: 2, score_adversaire: 0, buts: 1, passes_d: 1 },
-      { adversaire: 'Club B', score_equipe: 1, score_adversaire: 1, buts: 1, passes_d: 0 }
+      { adversaire: 'Club B', score_equipe: 1, score_adversaire: 1, buts: 1, passes_d: 0 },
+      { adversaire: 'Club C', score_equipe: null, score_adversaire: 3, buts: 0, passes_d: 0 }
     ]
     const tStats = summarizeTournamentMatches(tournoiMatches)
     assert.deepEqual(tStats, {
-      totalMatches: 2,
-      joues: 2,
+      totalMatches: 3,
+      joues: 3,
       v: 1,
       n: 1,
-      d: 0,
+      d: 1,
       bp: 3,
-      bc: 1,
+      bc: 4,
       buts: 2,
       passesD: 1
     })
@@ -127,7 +128,7 @@ describe('Domain - sessionMetrics', () => {
       { type_seance: 'TOURNOI', nom_tournoi: 'Cup Régionale', matchs_tournoi: tournoiMatches },
       { type_seance: 'ENTRAINEMENT', score_equipe: null, score_adversaire: null }
     ])
-    assert.deepEqual(summary, { joues: 5, v: 2, n: 2, d: 1, bp: 8, bc: 5 })
+    assert.deepEqual(summary, { joues: 6, v: 2, n: 2, d: 2, bp: 8, bc: 8 })
   })
 
   it('agrège la charge hebdomadaire du lundi au dimanche et l’historique sur 5 semaines', () => {

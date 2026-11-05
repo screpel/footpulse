@@ -143,29 +143,27 @@ export function evaluateSessionRecords(session, records, totalSessionsCount) {
 
 /**
  * Résume les rencontres d'un tournoi (Matchs joués, V/N/D, Buts pour/contre, Buts & Passes D. joueuse)
+ * Si un seul des deux scores a été saisi (l'autre laissé sur le placeholder "0"), la valeur omise vaut 0.
  */
 export function summarizeTournamentMatches(matchsTournoi = []) {
   const list = Array.isArray(matchsTournoi) ? matchsTournoi : []
   return list.reduce(
     (acc, m) => {
       const hasAdv = Boolean((m?.adversaire || '').trim())
-      const hasScore =
+      const hasEqScore =
         m?.score_equipe !== null &&
         m?.score_equipe !== undefined &&
-        m?.score_equipe !== '' &&
+        m?.score_equipe !== ''
+      const hasAdvScore =
         m?.score_adversaire !== null &&
         m?.score_adversaire !== undefined &&
         m?.score_adversaire !== ''
+      const hasAnyScore = hasEqScore || hasAdvScore
 
-      if (hasAdv || hasScore) {
+      if (hasAdv || hasAnyScore) {
         acc.totalMatches += 1
-      }
-      acc.buts += Number(m?.buts || 0)
-      acc.passesD += Number(m?.passes_d || 0)
-
-      if (hasScore) {
-        const eq = Number(m.score_equipe)
-        const adv = Number(m.score_adversaire)
+        const eq = hasEqScore ? Number(m.score_equipe) : 0
+        const adv = hasAdvScore ? Number(m.score_adversaire) : 0
         acc.joues += 1
         acc.bp += eq
         acc.bc += adv
@@ -173,6 +171,9 @@ export function summarizeTournamentMatches(matchsTournoi = []) {
         else if (eq === adv) acc.n += 1
         else acc.d += 1
       }
+      acc.buts += Number(m?.buts || 0)
+      acc.passesD += Number(m?.passes_d || 0)
+
       return acc
     },
     { totalMatches: 0, joues: 0, v: 0, n: 0, d: 0, bp: 0, bc: 0, buts: 0, passesD: 0 }
